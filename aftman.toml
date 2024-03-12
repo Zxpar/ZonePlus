@@ -1,0 +1,4 @@
+[tools]
+rojo = "rojo-rbx/rojo@6.0.2"
+tarmac = "rojo-rbx/tarmac@0.7.5"
+wally = "UpliftGames/Wally@0.3.2"
