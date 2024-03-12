@@ -3,7 +3,7 @@ name: Publish To Wally
 on:
   push:
     branches: #  Act on master branch commit
-    - main
+    - fork-main
 
 jobs:
   ci:

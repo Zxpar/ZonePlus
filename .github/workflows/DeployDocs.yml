@@ -2,7 +2,7 @@ name: MkDocs Deploy
 on:
   push:
     branches: #  Act on master branch commit
-    - main
+    - fork-main
 jobs:
   deploy:
     runs-on: ubuntu-latest
