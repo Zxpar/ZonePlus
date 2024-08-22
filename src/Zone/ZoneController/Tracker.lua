@@ -7,6 +7,8 @@ local heartbeat = runService.Heartbeat
 local Signal = require(script.Parent.Parent.Signal)
 local Janitor = require(script.Parent.Parent.Janitor)
 
+
+
 -- PUBLIC
 local Tracker = {}
 Tracker.__index = Tracker
@@ -27,6 +29,8 @@ Tracker.bodyPartsToIgnore = {
 	RightFoot = true,
 }
 
+
+
 -- FUNCTIONS
 function Tracker.getCombinedTotalVolumes()
 	local combinedVolume = 0
@@ -39,20 +43,24 @@ end
 function Tracker.getCharacterSize(character)
 	local head = character and character:FindFirstChild("Head")
 	local hrp = character and character:FindFirstChild("HumanoidRootPart")
-	if not (hrp and head) then return nil end
-	if not head:IsA("BasePart") then head = hrp end
+	if not(hrp and head) then return nil end
+	if not head:IsA("BasePart") then
+		head = hrp
+	end
 	local headY = head.Size.Y
 	local hrpSize = hrp.Size
 	local charSize = (hrpSize * Vector3.new(2, 2, 1)) + Vector3.new(0, headY, 0)
-	local charCFrame = hrp.CFrame * CFrame.new(0, headY / 2 - hrpSize.Y / 2, 0)
+	local charCFrame = hrp.CFrame * CFrame.new(0, headY/2 - hrpSize.Y/2, 0)
 	return charSize, charCFrame
 end
+
+
 
 -- CONSTRUCTOR
 function Tracker.new(name)
 	local self = {}
 	setmetatable(self, Tracker)
-
+	
 	self.name = name
 	self.totalVolume = 0
 	self.parts = {}
@@ -69,18 +77,22 @@ function Tracker.new(name)
 			local characters = {}
 			for _, player in pairs(players:GetPlayers()) do
 				local character = player.Character
-				if character then characters[character] = true end
+				if character then
+					characters[character] = true
+				end
 			end
 			self.characters = characters
 		end
-
+		
 		local function playerAdded(player)
 			local function charAdded(character)
 				local function trackChar()
 					local hrp = character:WaitForChild("HumanoidRootPart", 0.1)
 					local humanoid = character:WaitForChild("Humanoid", 0.1)
 					local head = character:WaitForChild("Head", 0.1)
-					if hrp == nil or humanoid == nil or head == nil then return end
+					if hrp == nil or humanoid == nil or head == nil then
+						return
+					end
 					updatePlayerCharacters()
 					self:update()
 					for _, valueInstance in pairs(humanoid:GetChildren()) do
@@ -102,7 +114,9 @@ function Tracker.new(name)
 					end)
 				end
 			end
-			if player.Character then charAdded(player.Character) end
+			if player.Character then
+				charAdded(player.Character)
+			end
 			player.CharacterAdded:Connect(function(char)
 				charAdded(char)
 			end)
@@ -110,16 +124,18 @@ function Tracker.new(name)
 				self.exitDetections[removingCharacter] = nil
 			end)
 		end
-
+		
 		players.PlayerAdded:Connect(playerAdded)
 		for _, player in pairs(players:GetPlayers()) do
 			playerAdded(player)
 		end
-
+		
 		players.PlayerRemoving:Connect(function(player)
 			updatePlayerCharacters()
 			self:update()
 		end)
+
+
 	elseif name == "item" then
 		local function updateItem(itemDetail, newValue)
 			if itemDetail.isCharacter then
@@ -143,6 +159,8 @@ function Tracker.new(name)
 	return self
 end
 
+
+
 -- METHODS
 function Tracker:_preventMultiFrameUpdates(methodName, ...)
 	-- This prevents the funtion being called twice within a single frame
@@ -164,7 +182,9 @@ function Tracker:_preventMultiFrameUpdates(methodName, ...)
 		task.defer(function()
 			local newCallsThisFrame = detail.callsThisFrame
 			detail.callsThisFrame = 0
-			if newCallsThisFrame > 1 then self[methodName](self, unpack(args)) end
+			if newCallsThisFrame > 1 then
+				self[methodName](self, unpack(args))
+			end
 		end)
 		return false
 	end
@@ -172,35 +192,36 @@ function Tracker:_preventMultiFrameUpdates(methodName, ...)
 end
 
 function Tracker:update()
-	if self:_preventMultiFrameUpdates("update") then return end
-
+	if self:_preventMultiFrameUpdates("update") then
+		return
+	end
+	
 	self.totalVolume = 0
 	self.parts = {}
 	self.partToItem = {}
 	self.items = {}
-
+	
 	-- This tracks the bodyparts of a character
 	for character, _ in pairs(self.characters) do
 		local charSize = Tracker.getCharacterSize(character)
-		if not charSize then continue end
+		if not charSize then
+			continue
+		end
 		local rSize = charSize
-		local charVolume = rSize.X * rSize.Y * rSize.Z
+		local charVolume = rSize.X*rSize.Y*rSize.Z
 		self.totalVolume += charVolume
-
-		local characterJanitor = self.janitor:add(Janitor.new(), "destroy", "trackCharacterParts-" .. self.name)
+		
+		local characterJanitor = self.janitor:add(Janitor.new(), "destroy", "trackCharacterParts-"..self.name)
 		local function updateTrackerOnParentChanged(instance)
-			characterJanitor:add(
-				instance.AncestryChanged:Connect(function()
-					if not instance:IsDescendantOf(game) then
-						if instance.Parent == nil and characterJanitor ~= nil then
-							characterJanitor:destroy()
-							characterJanitor = nil
-							self:update()
-						end
+			characterJanitor:add(instance.AncestryChanged:Connect(function()
+				if not instance:IsDescendantOf(game) then
+					if instance.Parent == nil and characterJanitor ~= nil then
+						characterJanitor:destroy()
+						characterJanitor = nil
+						self:update()
 					end
-				end),
-				"Disconnect"
-			)
+				end
+			end), "Disconnect")
 		end
 
 		for _, part in pairs(character:GetChildren()) do
@@ -217,18 +238,20 @@ function Tracker:update()
 	-- This tracks any additional baseParts
 	for additionalPart, _ in pairs(self.baseParts) do
 		local rSize = additionalPart.Size
-		local partVolume = rSize.X * rSize.Y * rSize.Z
+		local partVolume = rSize.X*rSize.Y*rSize.Z
 		self.totalVolume += partVolume
 		self.partToItem[additionalPart] = additionalPart
 		table.insert(self.parts, additionalPart)
 		table.insert(self.items, additionalPart)
 	end
-
+	
 	-- This creates the whitelist so that
 	self.whitelistParams = OverlapParams.new()
 	self.whitelistParams.FilterType = Enum.RaycastFilterType.Whitelist
 	self.whitelistParams.MaxParts = #self.parts
 	self.whitelistParams.FilterDescendantsInstances = self.parts
 end
+
+
 
 return Tracker
